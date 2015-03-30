@@ -58,11 +58,40 @@ abstract class CanvasController {
 	
 	void handleKey(String char) {
 		switch(char) {
-			case 'R': window.location.reload(); break;
-			case 'P': palette.hidden = !palette.hidden; break;
-			case 'M': menu.hidden = !menu.hidden; break;
-			case 'S': transcoder.save(); break;
-			case 'L': transcoder.load(); break;
+			case 'R': window.location.reload(); break; //Refresh
+			case 'P': palette.hidden = !palette.hidden; break; //Palette
+			case 'M': menu.hidden = !menu.hidden; break; //Menu
+			case 'S': transcoder.save(); break; //Save
+			case 'L': transcoder.load(); break; //Load
+			case 'C': break; //Copy
+			case 'X': break; //Cut
+			case 'V': break; //Paste
+			case 'G': //Group
+				CompositeFigure f = new CompositeFigure(selectedFigures);
+				allFigures
+					..removeAll(selectedFigures)
+					..add(f);
+				selectedFigures
+					..clear()
+					..add(f);
+				break;
+			case 'U': //Ungroup
+				Set<Figure> composites = new Set<Figure>.from(selectedFigures.where((Figure f) => f is CompositeFigure)),
+							exploded = new Set<Figure>();
+				for(CompositeFigure f in composites) { exploded.addAll(f.subfigures); }
+					
+				selectedFigures
+					..removeAll(composites)
+					..addAll(exploded);
+				allFigures
+					..removeAll(composites)
+					..addAll(exploded);
+				break; 
+			case 'D': //Delete
+				allFigures.removeAll(selectedFigures);
+				selectedFigures.clear();
+				break;
+			case 'Q': selectedFigures.forEach((Figure f) => f.color = activeColor); break;
 		}
 	}
 }
@@ -144,6 +173,24 @@ class PolygonController extends CanvasController {
 	}
 }
 
+class LineController extends CanvasController {
+	//Methods
+	void handleDown(Point<double> p) {
+		activeFigure = new Polygon()..addPoint(p)..addPoint(p);
+	}
+	
+	void handleDrag(Point<double> p) {
+		(activeFigure as Polygon)
+			..removePoint()
+			..addPoint(p);
+	}
+	
+	void handleUp(Point<double> p) {
+		handleDrag(p);
+		completeFigure();
+	}
+}
+
 class FreehandController extends CanvasController {
 	//Statics
 	static final SMOOTHING = 0.6;
@@ -184,9 +231,11 @@ class SelectionController extends CanvasController {
 	
 	void handleDrag(Point<double> p) {
 		outline.radius = p.distanceTo(outline.center);
-		selectedFigures.addAll(allFigures.where( (Figure f) =>
-			f.center.distanceTo(outline.center) < outline.radius
-		));
+		selectedFigures
+			..clear()
+			..addAll(allFigures.where( (Figure f) =>
+				f.center.distanceTo(outline.center) < outline.radius
+			));
 	}
 	
 	void handleUp(Point<double> p) => selectionCircle = null;

@@ -61,7 +61,12 @@ class CompositeFigure extends Figure {
 		var c = center - p;
 		_center = p;
 		for(Figure f in _subfigures) { f.center -= c; }
-	}	
+	}
+	
+	CanvasColor get color => null;
+	void	    set color(CanvasColor c) => _subfigures.forEach((Figure f) => f.color = c);
+	
+	Set<Figure> get subfigures => new Set<Figure>.from(_subfigures);
 }
 
 class Polygon extends Figure {	
@@ -80,7 +85,7 @@ class Polygon extends Figure {
 	}
 	void		  set center(Point<double> p) {
 		Point<double> delta = p - center;
-		for(int i = 0; i < _points.length; i++) { _points[i] -= delta; }
+		for(int i = 0; i < _points.length; i++) { _points[i] += delta; }
 		_center = p;
 	}
 	

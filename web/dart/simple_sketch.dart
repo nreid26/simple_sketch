@@ -45,6 +45,7 @@ void main() {
 		..append( new MenuItem('images/select.png', new SelectionController()) )
 		..append( new MenuItem('images/move.png', new MoveController()) )
 		..append( new MenuItem('images/freehand.png', new FreehandController()) )
+		..append( new MenuItem('images/line.png', new LineController()) )
 		..append( new MenuItem('images/polygon.png', new PolygonController()) )
 		..append( new MenuItem('images/rectangle.png', new AxialController(new Rectangle())) )
 		..append( new MenuItem('images/square.png', new RadialController(new Square())) )
