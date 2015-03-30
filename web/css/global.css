@@ -1,0 +1,57 @@
+body {
+	overflow: hidden;
+}
+
+#popup_wrapper {
+	position: absolute;
+	top: 0px;
+	z-index: 10;
+	
+	height: 100vh;
+	width: 100vw;
+	
+	display: table;
+}
+#popup {
+	display: table-cell;
+	vertical-align: middle;
+	text-align: center;
+}
+#popup > div {
+	display: inline-block;
+	background-color: #888888;
+	
+	border: solid 2px #555555;
+	border-radius: 5px;
+	
+	padding: 10px;
+	margin: 10px;
+}
+
+.menu {
+		
+}
+
+.menu_item {
+	border: solid 2px #555555;
+	border-radius: 5px;
+	
+	margin: 10px;
+	margin-bottom: 8px;
+	
+	cursor: pointer;
+}
+.selected_menu_item,
+.menu_item:hover {
+	border-color: white;
+}
+#palette > div {
+	display: inline-block;
+}
+#palette_sample {
+	border: solid 2px #555555;
+	border-radius: 5px;
+	height: 50px;
+	width: 50px;
+	background-color
+}
