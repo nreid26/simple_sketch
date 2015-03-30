@@ -20,8 +20,8 @@ class ElementFactory {
 /////////////////////////////////////////////
 
 abstract class Hidable implements Element {
-	bool get hidden => style.display == 'none';
-	void set hidden(bool b) { style.display = (b) ? 'none' : 'inline-block'; }
+	bool get hidden => getComputedStyle().display == 'none';
+	void set hidden(bool b) { style.display = (b) ? 'none' : ''; }
 }
 
 abstract class Nonpropagating implements Element {
@@ -65,7 +65,8 @@ class MenuItem extends ImageElement {
 			..src = src
 			..onClick.listen((Event e) {
 				activeFigure = null;
-				activeController = controller;
+				activeController = controller..configure();
+				menu.hidden = true;
 				
 				if(_selected != null) { _selected.classes.remove('selected_menu_item'); }
 				_selected = m;
@@ -92,32 +93,18 @@ class Palette extends DivElement with Hidable, Nonpropagating {
 						<input type="range" max="255" value="0" /><br>
 					</div>
 					<div id="palette_sample"></div>
-					<br>
-					<input type="button" value="Ok" id="palette_ok" />
-					<input type="button" value="Cancel" id="palette_cancel" />
 					''';
 		
 		List<RangeInputElement> sliderList = this.querySelectorAll('input[type="range"]');
 		DivElement sample = this.querySelector('#palette_sample');
-		CanvasColor color;
 		
 		void setSample(Event e) {
 			var l = sliderList.map((re) => int.parse(re.value, onError: (s) => 0)).toList(growable: false);
-			color = new CanvasColor.rgb(l[0], l[1], l[2]);
-			sample.style.background = color.hexString;
+			activeColor = new CanvasColor.rgb(l[0], l[1], l[2]);
+			sample.style.background = activeColor.hexString;
 		}
 		for(Element r in sliderList) { r.onChange.listen(setSample); }
 		setSample(null);
-		
-		this.querySelector('input[type="button"][value="Ok"]').onClick.listen((e) {
-				hidden = true;
-				activeColor = color;
-			});
-		this.querySelector('input[type="button"][value="Cancel"]').onClick.listen((e) {
-				hidden = true;
-				color = activeColor;
-				sample.style.background = color.hexString;
-			});
 	}
 	
 	factory Palette() { 

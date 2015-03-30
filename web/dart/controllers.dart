@@ -5,7 +5,14 @@ abstract class CanvasController {
 	static Point<double> _unroundPoint(Point p) => (p.x is int || p.y is int) ? new Point<double>(p.x.toDouble(), p.y.toDouble()) : p;
 	static bool _down = false;
 	
+	//Data
+	String cursorStyle = 'crosshair';
+	
 	//Methods		
+	void configure() {
+		document.body.style.cursor = cursorStyle;
+	}
+	
 	void acceptClick(MouseEvent e) {
 		e.stopPropagation();
 		e.preventDefault();
@@ -176,7 +183,10 @@ class PolygonController extends CanvasController {
 class LineController extends CanvasController {
 	//Methods
 	void handleDown(Point<double> p) {
-		activeFigure = new Polygon()..addPoint(p)..addPoint(p);
+		activeFigure = new Polygon()
+			..color = activeColor
+			..addPoint(p)
+			..addPoint(p);
 	}
 	
 	void handleDrag(Point<double> p) {
@@ -244,6 +254,7 @@ class SelectionController extends CanvasController {
 class MoveController extends CanvasController {
 	//Data
 	Point<double> _last;
+	String cursorStyle = 'move';
 	
 	//Methods
 	void handleDown(Point<double> p) { _last = p; }
