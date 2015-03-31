@@ -2,6 +2,12 @@ part of simple_sketch;
 
 abstract class AxialFigure implements Figure {
 	num halfHeight = 0, halfWidth = 0;
+	
+	Map addEncoding(Map m) {
+		m['halfHeight'] = halfHeight;
+		m['halfWidth'] = halfWidth;
+		return m;
+	}
 }
 
 abstract class RadialFigure implements AxialFigure {
@@ -12,23 +18,55 @@ abstract class RadialFigure implements AxialFigure {
 	
 	num  get halfWidth => radius;
 	void set halfWidth(num n) { radius = n; }
+	
+	Map addEncoding(Map m) {
+		m['radius'] = radius;
+		return m;
+	}
 }
 
 ////////////////////////////////////////////////
 
+final Map<String, Function> REVIVE_MAP = {
+	'CompositeFigure': CompositeFigure.revive,
+	'Polygon': Polygon.revive,
+	'Ellipse': Ellipse.revive,
+	'Circle': Circle.revive,
+	'Rectangle': Rectangle.revive,
+	'Square': Square.revive,
+};
+
+String _toHexString(Color c) => '#' + c.toHexColor().toString();
+
+///////////////////////////////////////////////
+
 abstract class Figure {
 	//Data
 	Point<double> center = ORIGIN;
-	CanvasColor color = new CanvasColor.rgb(0, 0, 0);
+	Color color = new Color.rgb(0, 0, 0);
 	
 	//Methods
 	Figure clone();
 	void draw(CanvasRenderingContext2D context);
 		
 	num get perimeter;
+	
+	Map toJson() => {
+		'class': this.runtimeType.toString(),
+		'center': {'x': center.x, 'y': center.y},
+		'perimeter': perimeter,
+		'color': _toHexString(color).substring(1),
+	};
 }
 
 class CompositeFigure extends Figure {	
+	//Static
+	static CompositeFigure revive(Map m) {
+		var s = new Set<Figure>();
+		for(Map p in m['subfigures']) { s.add( REVIVE_MAP[p['class']](p) ); }
+		return new CompositeFigure(s);
+	}
+	
 	//Data
 	final Set<Figure> _subfigures = new Set<Figure>();
 	final num perimeter;
@@ -63,13 +101,27 @@ class CompositeFigure extends Figure {
 		for(Figure f in _subfigures) { f.center -= c; }
 	}
 	
-	CanvasColor get color => null;
-	void	    set color(CanvasColor c) => _subfigures.forEach((Figure f) => f.color = c);
+	Color get color => null;
+	void	    set color(Color c) => _subfigures.forEach((Figure f) => f.color = c);
 	
 	Set<Figure> get subfigures => new Set<Figure>.from(_subfigures);
+	
+	Map toJson() {
+		var m = super.toJson();
+		m['subfigures'] = _subfigures.map((Figure f) => toJson()).toList(growable: false);
+		return m;
+	}
 }
 
 class Polygon extends Figure {	
+	//Static
+	static Polygon revive(Map m) {
+		return new Polygon()
+			.._points.addAll( m['points'].map((Map p) => new Point<double>(p['x'], p['y'])) )
+			.._isClosed = m['closed']
+			..color = new Color.hex(m['color']);
+	}
+	
 	//Data
 	final List<Point<double>> _points = [];
 	bool _isClosed = false;
@@ -102,7 +154,8 @@ class Polygon extends Figure {
 	num get perimeter {
 		if(_perimeter == null) {
 			_perimeter = 0;
-			Iterator a = _points.iterator, b = _points.iterator;
+			Iterator a = _points.iterator..moveNext(), b = _points.iterator..moveNext();
+			
 			while(a.moveNext()) {
 				_perimeter += a.current.distanceTo(b.current);
 				b.moveNext();
@@ -116,7 +169,7 @@ class Polygon extends Figure {
 		if(_points.length < 2) { return; }
 		
 		context
-			..strokeStyle = color.hexString
+			..strokeStyle = _toHexString(color)
 			..beginPath()
 			..moveTo(_points.first.x, _points.first.y);
 		
@@ -145,13 +198,29 @@ class Polygon extends Figure {
 		_perimeter = null;
 		return (_points.removeLast() != null);
 	}		
+	
+	Map toJson() {
+		var m = super.toJson();
+		m['closed'] = isClosed;
+        m['points'] = _points.map((Point p) => {'x': p.x, 'y': p.y}).toList(growable: false);
+		return m;
+	}	
 }
 
-class Ellipse extends Figure with AxialFigure {		
+class Ellipse extends Figure with AxialFigure {	
+	//Static
+	static Ellipse revive(Map m) {
+		return new Ellipse()
+			..center = new Point<double>(m['center']['x'], m['center']['y'])
+			..halfHeight = m['halfHeight']
+			..halfWidth = m['halfWidth']
+			..color = new Color.hex(m['color']);
+	}
+	
 	//Methods
 	void draw(CanvasRenderingContext2D context) {
 		context		
-			..strokeStyle = color.hexString
+			..strokeStyle = _toHexString(color)
 			..beginPath()
 			..ellipse(center.x, center.y, halfWidth, halfHeight, 0, 0, 2 * PI, false)
 			..stroke()
@@ -162,6 +231,7 @@ class Ellipse extends Figure with AxialFigure {
 	Ellipse clone() {
 		return new Ellipse()
 			..color = color
+			..center = center
 			..halfHeight = halfHeight
 			..halfWidth = halfWidth;
 	}	
@@ -170,40 +240,72 @@ class Ellipse extends Figure with AxialFigure {
 		var h = pow((halfWidth - halfHeight) / (halfWidth + halfHeight), 2);
 		return PI * (halfWidth + halfHeight) * (1 + (3 * h) / (10 - sqrt(4 - 3 * h))); //Ramanujan approximation
 	}
+	
+	Map toJson() => addEncoding(super.toJson());
 }
 
 class Circle extends Ellipse with RadialFigure {	
+	//Static
+	static Circle revive(Map m) {
+		return new Circle()
+			..center = new Point<double>(m['center']['x'], m['center']['y'])
+			..radius = m['radius']
+			..color = new Color.hex(m['color']);
+	}
+	
 	//Methods	
 	Circle clone() {
 		return new Circle()
 			..color = color
+			..center = center
 			..radius = radius;
-	}	
+	}
 }
 
-class Rectangle extends Figure with AxialFigure {	
+class Rectangle extends Figure with AxialFigure {
+	//Static
+	static Rectangle revive(Map m) {
+		return new Rectangle()
+			..center = new Point<double>(m['center']['x'], m['center']['y'])
+			..halfHeight = m['halfHeight']
+			..halfWidth = m['halfWidth']
+			..color = new Color.hex(m['color']);
+	}
+	
 	//Methods
 	void draw(CanvasRenderingContext2D context) {
 		context
-			..strokeStyle = color.hexString
+			..strokeStyle = _toHexString(color)
 			..strokeRect(center.x - halfWidth, center.y - halfHeight, halfWidth * 2, halfHeight * 2);
 	}
 	
 	Rectangle clone() {
 		return new Rectangle()
 			..color = color
+			..center = center
 			..halfHeight = halfHeight
 			..halfWidth = halfWidth;
 	}	
 	
 	num get perimeter => 4 * (halfWidth + halfHeight);
+	
+	Map toJson() => addEncoding(super.toJson());
 }
 
 class Square extends Rectangle with RadialFigure {
+	//Static
+	static Square revive(Map m) {
+		return new Square()
+			..center = new Point<double>(m['center']['x'], m['center']['y'])
+			..radius = m['radius']
+			..color = new Color.hex(m['color']);
+	}
+	
 	//Methods	
  	Square clone() {
 		return new Square()
 			..color = color
+			..center = center
 			..radius = radius;
 	}	 	
 }

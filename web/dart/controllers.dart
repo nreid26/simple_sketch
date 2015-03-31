@@ -5,6 +5,7 @@ abstract class CanvasController {
 	static Point<double> _unroundPoint(Point p) => (p.x is int || p.y is int) ? new Point<double>(p.x.toDouble(), p.y.toDouble()) : p;
 	static bool _down = false;
 	
+	
 	//Data
 	String cursorStyle = 'crosshair';
 	
@@ -49,13 +50,13 @@ abstract class CanvasController {
 		redraw();
 	}
 	
-	void acceptKey(KeyboardEvent e) {
-		e.stopPropagation();
-		e.preventDefault();
-		
-		if(e.repeat || e.shiftKey || !e.ctrlKey) { return; }		
-		handleKey(new String.fromCharCode(e.keyCode));
-		redraw();
+	void acceptKey(KeyboardEvent e) {	
+		if(e.repeat || e.shiftKey || !e.ctrlKey) { }		
+		else if( handleKey(new String.fromCharCode(e.keyCode)) ) {
+			e.stopPropagation();
+			e.preventDefault();
+			redraw();
+		}
 	}
 		
 	void handleClick(Point<double> p) { }
@@ -63,43 +64,10 @@ abstract class CanvasController {
 	void handleDrag(Point<double> p) { }
 	void handleUp(Point<double> p) { }
 	
-	void handleKey(String char) {
-		switch(char) {
-			case 'R': window.location.reload(); break; //Refresh
-			case 'P': palette.hidden = !palette.hidden; break; //Palette
-			case 'M': menu.hidden = !menu.hidden; break; //Menu
-			case 'S': transcoder.save(); break; //Save
-			case 'L': transcoder.load(); break; //Load
-			case 'C': break; //Copy
-			case 'X': break; //Cut
-			case 'V': break; //Paste
-			case 'G': //Group
-				CompositeFigure f = new CompositeFigure(selectedFigures);
-				allFigures
-					..removeAll(selectedFigures)
-					..add(f);
-				selectedFigures
-					..clear()
-					..add(f);
-				break;
-			case 'U': //Ungroup
-				Set<Figure> composites = new Set<Figure>.from(selectedFigures.where((Figure f) => f is CompositeFigure)),
-							exploded = new Set<Figure>();
-				for(CompositeFigure f in composites) { exploded.addAll(f.subfigures); }
-					
-				selectedFigures
-					..removeAll(composites)
-					..addAll(exploded);
-				allFigures
-					..removeAll(composites)
-					..addAll(exploded);
-				break; 
-			case 'D': //Delete
-				allFigures.removeAll(selectedFigures);
-				selectedFigures.clear();
-				break;
-			case 'Q': selectedFigures.forEach((Figure f) => f.color = activeColor); break;
-		}
+	bool handleKey(String char) {
+		Function f = commands[char];
+		if(f != null) { f(); return true; }
+		return false;
 	}
 }
 
@@ -233,6 +201,7 @@ class SelectionController extends CanvasController {
 	
 	//Methods
 	void handleDown(Point<double> p) {
+		unselectedFigures.addAll(selectedFigures);
 		selectedFigures.clear();
 		selectionCircle = outline
 							..radius = 0
@@ -241,11 +210,13 @@ class SelectionController extends CanvasController {
 	
 	void handleDrag(Point<double> p) {
 		outline.radius = p.distanceTo(outline.center);
+		unselectedFigures.addAll(selectedFigures);
 		selectedFigures
 			..clear()
-			..addAll(allFigures.where( (Figure f) =>
+			..addAll(unselectedFigures.where( (Figure f) =>
 				f.center.distanceTo(outline.center) < outline.radius
 			));
+		unselectedFigures.removeAll(selectedFigures);
 	}
 	
 	void handleUp(Point<double> p) => selectionCircle = null;

@@ -1,1 +1,0 @@
-part of simple_sketch;

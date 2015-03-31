@@ -29,10 +29,6 @@ body {
 	box-shadow: 5px 5px 25px black;
 }
 
-.menu {
-		
-}
-
 .menu_item {
 	border: solid 2px #555555;
 	border-radius: 5px;
@@ -58,4 +54,8 @@ body {
 	
 	border: solid 2px #555555;
 	border-radius: 5px;
+}
+
+#info li {
+	text-align: left;
 }
