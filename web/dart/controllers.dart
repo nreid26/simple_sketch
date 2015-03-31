@@ -2,7 +2,6 @@ part of simple_sketch;
 
 abstract class CanvasController {
 	//Static
-	static Point<num> _unroundPoint(Point p) => (p.x is int || p.y is int) ? new Point<num>(p.x.toDouble(), p.y.toDouble()) : p;
 	static bool _down = false, _ctrl = false, _shift = false;
 	static final commands = {
 	 	'A': ()  { selectedFigures.addAll(unselectedFigures); unselectedFigures.clear(); },
@@ -63,14 +62,14 @@ abstract class CanvasController {
 	
 	void acceptClick(MouseEvent e) {
 		_generalMouse(e);	
-		handleClick(_unroundPoint(e.client));
+		handleClick(e.client);
 		redraw();
 	}
 	
 	void acceptDown(MouseEvent e) {
 		_generalMouse(e);	
 		_down = true;
-		handleDown(_unroundPoint(e.client));
+		handleDown(e.client);
 		redraw();
 	}
 	
@@ -79,7 +78,7 @@ abstract class CanvasController {
 		e.preventDefault();
 		
 		if(_down) {
-			handleDrag(_unroundPoint(e.client));
+			handleDrag(e.client);
 			redraw();
 		}
 	}
