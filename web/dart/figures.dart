@@ -38,11 +38,13 @@ final Map<String, Function> REVIVE_MAP = {
 
 String _toHexString(Color c) => '#' + c.toHexColor().toString();
 
+Point<num> _extractPoint(Map m) => new Point<num>(m['x'].toDouble(), m['y'].toDouble());
+
 ///////////////////////////////////////////////
 
 abstract class Figure {
 	//Data
-	Point<double> center = ORIGIN;
+	Point<num> center = ORIGIN;
 	Color color = new Color.rgb(0, 0, 0);
 	
 	//Methods
@@ -70,12 +72,12 @@ class CompositeFigure extends Figure {
 	//Data
 	final Set<Figure> _subfigures = new Set<Figure>();
 	final num perimeter;
-	Point<double> _center;
+	Point<num> _center;
 	
 	//Constructor
 	CompositeFigure(Set<Figure> parts) : perimeter = parts.fold(0, (num p, Figure f) => p + f.perimeter) {
 		_subfigures.addAll(parts);
-		_center = _subfigures.fold(ORIGIN, (Point<double> p, Figure f) => p + f.center * f.perimeter) * (1 / perimeter);
+		_center = _subfigures.fold(ORIGIN, (Point<num> p, Figure f) => p + f.center * f.perimeter) * (1 / perimeter);
 	}
 	
 	//Methods
@@ -94,8 +96,8 @@ class CompositeFigure extends Figure {
 		return new CompositeFigure(x);
 	}
 	
-	Point<double> get center => _center;
-	void set center(Point<double> p) {
+	Point<num> get center => _center;
+	void set center(Point<num> p) {
 		var c = center - p;
 		_center = p;
 		for(Figure f in _subfigures) { f.center -= c; }
@@ -117,26 +119,26 @@ class Polygon extends Figure {
 	//Static
 	static Polygon revive(Map m) {
 		return new Polygon()
-			.._points.addAll( m['points'].map((Map p) => new Point<double>(p['x'], p['y'])) )
+			.._points.addAll( m['points'].map(_extractPoint) )
 			.._isClosed = m['closed']
 			..color = new Color.hex(m['color']);
 	}
 	
 	//Data
-	final List<Point<double>> _points = [];
+	final List<Point<num>> _points = [];
 	bool _isClosed = false;
 	num _perimeter = null;
-	Point<double> _center = null;
+	Point<num> _center = null;
 		
 	//Methods
-	Point<double> get center {
+	Point<num> get center {
 		if(_center == null) {
 			_center = _points.reduce((a, b) => a + b) * (1 / _points.length);
 		}
 		return _center;
 	}
-	void		  set center(Point<double> p) {
-		Point<double> delta = p - center;
+	void		  set center(Point<num> p) {
+		Point<num> delta = p - center;
 		for(int i = 0; i < _points.length; i++) { _points[i] += delta; }
 		_center = p;
 	}
@@ -187,7 +189,7 @@ class Polygon extends Figure {
 			.._isClosed = _isClosed;
 	}
 	
-	void addPoint(Point<double> p) {		
+	void addPoint(Point<num> p) {		
 		_points.add(p);
 		_center = null;
 		_perimeter = null;
@@ -211,7 +213,7 @@ class Ellipse extends Figure with AxialFigure {
 	//Static
 	static Ellipse revive(Map m) {
 		return new Ellipse()
-			..center = new Point<double>(m['center']['x'], m['center']['y'])
+			..center = _extractPoint(m['center'])
 			..halfHeight = m['halfHeight']
 			..halfWidth = m['halfWidth']
 			..color = new Color.hex(m['color']);
@@ -222,7 +224,7 @@ class Ellipse extends Figure with AxialFigure {
 		context		
 			..strokeStyle = _toHexString(color)
 			..beginPath()
-			..ellipse(center.x, center.y, halfWidth, halfHeight, 0, 0, 2 * PI, false)
+			..ellipse(center.x, center.y, halfWidth.abs(), halfHeight.abs(), 0, 0, 2 * PI, false)
 			..stroke()
 			
 			..restore();
@@ -238,7 +240,7 @@ class Ellipse extends Figure with AxialFigure {
 	
 	num get perimeter {
 		var h = pow((halfWidth - halfHeight) / (halfWidth + halfHeight), 2);
-		return PI * (halfWidth + halfHeight) * (1 + (3 * h) / (10 - sqrt(4 - 3 * h))); //Ramanujan approximation
+		return PI * (halfWidth.abs() + halfHeight.abs()) * (1 + (3 * h) / (10 - sqrt(4 - 3 * h))); //Ramanujan approximation
 	}
 	
 	Map toJson() => addEncoding(super.toJson());
@@ -248,7 +250,7 @@ class Circle extends Ellipse with RadialFigure {
 	//Static
 	static Circle revive(Map m) {
 		return new Circle()
-			..center = new Point<double>(m['center']['x'], m['center']['y'])
+			..center = _extractPoint(m['center'])
 			..radius = m['radius']
 			..color = new Color.hex(m['color']);
 	}
@@ -266,7 +268,7 @@ class Rectangle extends Figure with AxialFigure {
 	//Static
 	static Rectangle revive(Map m) {
 		return new Rectangle()
-			..center = new Point<double>(m['center']['x'], m['center']['y'])
+			..center = _extractPoint(m['center'])
 			..halfHeight = m['halfHeight']
 			..halfWidth = m['halfWidth']
 			..color = new Color.hex(m['color']);
@@ -296,7 +298,7 @@ class Square extends Rectangle with RadialFigure {
 	//Static
 	static Square revive(Map m) {
 		return new Square()
-			..center = new Point<double>(m['center']['x'], m['center']['y'])
+			..center = _extractPoint(m['center'])
 			..radius = m['radius']
 			..color = new Color.hex(m['color']);
 	}

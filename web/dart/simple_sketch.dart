@@ -19,47 +19,6 @@ final CanvasRenderingContext2D context = canvas.context2D;
 final Palette palette = new Palette();
 final Menu menu = new Menu();
 final Info info = new Info();
-final commands = {
-	'A': ()  { selectedFigures.addAll(unselectedFigures); unselectedFigures.clear(); },
-	'C': () => copiedFigures..clear()..addAll( selectedFigures.map((Figure f) => f.clone()) ),
-	'D': () => selectedFigures.clear(),
-	'G': ()  { var f = new CompositeFigure(selectedFigures); selectedFigures..clear()..add(f); },
-	'I': () => info.hidden = !info.hidden,
-	'M': () => menu.hidden = !menu.hidden,
-	'P': () => palette.hidden = !palette.hidden,
-	'Q': () => selectedFigures.forEach((Figure f) => f.color = activeColor),
-	'S': () => window.localStorage['drawing'] = JSON.encode({'unselected': unselectedFigures.toList(), 'selected': selectedFigures.toList(), 'copied': copiedFigures.toList()}),
-	'V': ()  { unselectedFigures.addAll(selectedFigures); selectedFigures..clear()..addAll( copiedFigures.map((Figure f) => f.clone()) ); },
-	'X': ()  { copiedFigures..clear()..addAll(selectedFigures); selectedFigures.clear(); },
-	
-	'U': ()  {
-    		Set<Figure> composites = new Set<Figure>.from(selectedFigures.where((Figure f) => f is CompositeFigure)),
-        				exploded = new Set<Figure>();
-        	for(CompositeFigure f in composites) { exploded.addAll(f.subfigures); }
-        		
-        	selectedFigures
-        		..removeAll(composites)
-        		..addAll(exploded);
-	},
-    
-    'O': () {
-    	String serial = window.localStorage['drawing'];
-    	if(serial == null) { return; }
-    	
-    	Iterable<Figure> revive(Iterable i) => i.map((Map m) => REVIVE_MAP[m['class']](m));
-    	
-    	Map interm = JSON.decode(serial);
-    	selectedFigures
-    		..clear()
-    		..addAll(revive(interm['selected']));
-    	unselectedFigures
-	        ..clear()
-    		..addAll(revive(interm['unselected']));
-    	copiedFigures
-	        ..clear()
-    		..addAll(revive(interm['copied']));
-    }
-};
 
 //Mutables
 Color activeColor = new Color.rgb(0, 0, 0);
@@ -108,7 +67,9 @@ void main() {
 		..onMouseMove.listen((e) => activeController.acceptMove(e))
 		..onMouseDown.listen((e) => activeController.acceptDown(e))
 		..onMouseUp.listen((e) => activeController.acceptUp(e))
-		..onKeyDown.listen((e) => activeController.acceptKey(e));
+		..onMouseLeave.listen((e) => activeController.acceptLeave(e))
+		..onKeyDown.listen((e) => activeController.acceptKeyDown(e))
+		..onKeyUp.listen((e) => activeController.acceptKeyUp(e));
 }
 
 void redraw() {
@@ -140,5 +101,9 @@ void redraw() {
 void completeFigure() {
 	unselectedFigures.add(activeFigure);
 	activeFigure = null;
+}
+
+void mouseUpdate(Point p) {
+	
 }
 

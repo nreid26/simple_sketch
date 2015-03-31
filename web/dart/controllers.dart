@@ -2,8 +2,49 @@ part of simple_sketch;
 
 abstract class CanvasController {
 	//Static
-	static Point<double> _unroundPoint(Point p) => (p.x is int || p.y is int) ? new Point<double>(p.x.toDouble(), p.y.toDouble()) : p;
-	static bool _down = false;
+	static Point<num> _unroundPoint(Point p) => (p.x is int || p.y is int) ? new Point<num>(p.x.toDouble(), p.y.toDouble()) : p;
+	static bool _down = false, _ctrl = false, _shift = false;
+	static final commands = {
+	 	'A': ()  { selectedFigures.addAll(unselectedFigures); unselectedFigures.clear(); },
+	 	'C': () => copiedFigures..clear()..addAll( selectedFigures.map((Figure f) => f.clone()) ),
+	 	'D': () => selectedFigures.clear(),
+	 	'G': ()  { var f = new CompositeFigure(selectedFigures); selectedFigures..clear()..add(f); },
+	 	'I': () => info.hidden = !info.hidden,
+	 	'M': () => menu.hidden = !menu.hidden,
+	 	'P': () => palette.hidden = !palette.hidden,
+	 	'Q': () => selectedFigures.forEach((Figure f) => f.color = activeColor),
+	 	'S': () => window.localStorage['drawing'] = JSON.encode({'unselected': unselectedFigures.toList(), 'selected': selectedFigures.toList(), 'copied': copiedFigures.toList()}),
+	 	'V': ()  { unselectedFigures.addAll(selectedFigures); selectedFigures..clear()..addAll( copiedFigures.map((Figure f) => f.clone()) ); },
+	 	'X': ()  { copiedFigures..clear()..addAll(selectedFigures); selectedFigures.clear(); },
+	 	
+	 	'U': ()  {
+	     		Set<Figure> composites = new Set<Figure>.from(selectedFigures.where((Figure f) => f is CompositeFigure)),
+	         				exploded = new Set<Figure>();
+	         	for(CompositeFigure f in composites) { exploded.addAll(f.subfigures); }
+	         		
+	         	selectedFigures
+	         		..removeAll(composites)
+	         		..addAll(exploded);
+	 	},
+	     
+	     'O': () {
+	     	String serial = window.localStorage['drawing'];
+	     	if(serial == null) { return; }
+	     	
+	     	Iterable<Figure> revive(Iterable i) => i.map((Map m) => REVIVE_MAP[m['class']](m));
+	     	
+	     	Map interm = JSON.decode(serial);
+	     	selectedFigures
+	     		..clear()
+	     		..addAll(revive(interm['selected']));
+	     	unselectedFigures
+	 	        ..clear()
+	     		..addAll(revive(interm['unselected']));
+	     	copiedFigures
+	 	        ..clear()
+	     		..addAll(revive(interm['copied']));
+	     }
+	};
 	
 	
 	//Data
@@ -14,18 +55,20 @@ abstract class CanvasController {
 		document.body.style.cursor = cursorStyle;
 	}
 	
-	void acceptClick(MouseEvent e) {
+	void _generalMouse(MouseEvent e) {
 		e.stopPropagation();
 		e.preventDefault();
-		
+		mouseUpdate(e.client);
+	}
+	
+	void acceptClick(MouseEvent e) {
+		_generalMouse(e);	
 		handleClick(_unroundPoint(e.client));
 		redraw();
 	}
 	
 	void acceptDown(MouseEvent e) {
-		e.stopPropagation();
-		e.preventDefault();
-		
+		_generalMouse(e);	
 		_down = true;
 		handleDown(_unroundPoint(e.client));
 		redraw();
@@ -42,57 +85,86 @@ abstract class CanvasController {
 	}
 	
 	void acceptUp(MouseEvent e) {
-		e.stopPropagation();
-		e.preventDefault();
-		
+		_generalMouse(e);	
 		_down = false;
 		handleUp(e.client);
 		redraw();
 	}
+		
+	void acceptLeave(MouseEvent e) {
+		_generalMouse(e);	
+		_ctrl = e.ctrlKey;
+		_shift = e.shiftKey;
+		_down = false;
+		redraw();
+	}
 	
-	void acceptKey(KeyboardEvent e) {	
-		if(e.repeat || e.shiftKey || !e.ctrlKey) { }		
-		else if( handleKey(new String.fromCharCode(e.keyCode)) ) {
+	void acceptKeyDown(KeyboardEvent e) {	
+		if(e.repeat) { return; }
+		_ctrl = e.ctrlKey;
+		_shift = e.shiftKey;
+		
+		if( handleKey(new String.fromCharCode(e.keyCode)) ) {
 			e.stopPropagation();
 			e.preventDefault();
-			redraw();
 		}
+		redraw();
+	}
+	
+	void acceptKeyUp(KeyboardEvent e) {
+		_ctrl = e.ctrlKey;
+		_shift = e.shiftKey;
+		redraw();
 	}
 		
-	void handleClick(Point<double> p) { }
-	void handleDown(Point<double> p) { }
-	void handleDrag(Point<double> p) { }
-	void handleUp(Point<double> p) { }
+	void handleClick(Point<num> p) { }
+	void handleDown(Point<num> p) { }
+	void handleDrag(Point<num> p) { }
+	void handleUp(Point<num> p) { }
 	
 	bool handleKey(String char) {
 		Function f = commands[char];
-		if(f != null) { f(); return true; }
-		return false;
+		if(_shift || !_ctrl || f == null) { return false; } 
+		f();
+		return true;
 	}
 }
 
 class AxialController extends CanvasController {
 	//Data
 	final AxialFigure prime;
+	Point<num> _start;
 	
 	//Constructor
 	AxialController(this.prime);
 	
 	//Methods	
-	void handleDown(Point<double> p) {
+	void handleDown(Point<num> p) {
+		_start = p;
 		activeFigure = prime.clone()
 					   		..center = p
 					   		..color = activeColor;
 	}
 	
-	void handleDrag(Point<double> p) {
-		p -= activeFigure.center;
-		(activeFigure as AxialFigure)
-			..halfWidth = p.x.abs()
-			..halfHeight = p.y.abs();
+	void handleDrag(Point<num> p) {
+		Point<num> delta = p - _start;
+		
+		if(CanvasController._shift) {
+			(activeFigure as AxialFigure)
+				..center = _start
+				..halfWidth = delta.x.abs()
+				..halfHeight = delta.y.abs();
+		}
+		else {
+			delta *= 0.5;
+			(activeFigure as AxialFigure)
+				..center = _start + delta
+				..halfWidth = delta.x
+				..halfHeight = delta.y;
+		}
 	}	
 	
-	void handleUp(Point<double> p) {
+	void handleUp(Point<num> p) {
 		handleDrag(p);
 		completeFigure();
 	}
@@ -103,8 +175,22 @@ class RadialController extends AxialController {
 	RadialController(RadialFigure prime) : super(prime);
 	
 	//Methods
-	void handleDrag(Point<double> p) {
-		(activeFigure as RadialFigure).radius = activeFigure.center.distanceTo(p);
+	num sign(num n) => (n == 0) ? 0 : ((n < 0) ? -1 : 1);
+	
+	void handleDrag(Point<num> p) {
+		Point<num> delta = p - _start;
+
+		if(CanvasController._shift) {
+			(activeFigure as RadialFigure)
+				..center = _start 
+				..radius = delta.magnitude;
+		}
+		else {
+			num n = ((delta.x.abs() < delta.y.abs()) ? delta.x : delta.y).abs() / 2;
+			(activeFigure as RadialFigure)
+				..center = _start + new Point<num>(n * sign(delta.x), n * sign(delta.y))
+				..radius = n;
+		}
 	}	
 }
 
@@ -113,11 +199,11 @@ class PolygonController extends CanvasController {
 	static final MIN_SEPARATION = 10;
 	
 	//Data
-	Point<double> _start, _last;
+	Point<num> _start, _last;
 	bool _isBufferPoint = false;
 	
 	//Methods	
-	void handleClick(Point<double> p) {
+	void handleClick(Point<num> p) {
 		if(activeFigure == null) { 
 			activeFigure = new Polygon()
 								..color = activeColor;
@@ -139,7 +225,7 @@ class PolygonController extends CanvasController {
 		_last = p;
 	}
 	
-	void handleDrag(Point<double> p) {
+	void handleDrag(Point<num> p) {
 		if(activeFigure == null) { return; }
 		
 		if(_isBufferPoint) { (activeFigure as Polygon).removePoint(); }
@@ -150,20 +236,20 @@ class PolygonController extends CanvasController {
 
 class LineController extends CanvasController {
 	//Methods
-	void handleDown(Point<double> p) {
+	void handleDown(Point<num> p) {
 		activeFigure = new Polygon()
 			..color = activeColor
 			..addPoint(p)
 			..addPoint(p);
 	}
 	
-	void handleDrag(Point<double> p) {
+	void handleDrag(Point<num> p) {
 		(activeFigure as Polygon)
 			..removePoint()
 			..addPoint(p);
 	}
 	
-	void handleUp(Point<double> p) {
+	void handleUp(Point<num> p) {
 		handleDrag(p);
 		completeFigure();
 	}
@@ -174,22 +260,22 @@ class FreehandController extends CanvasController {
 	static final SMOOTHING = 0.6;
 	
 	//Data
-	Point<double> _smoothed;
+	Point<num> _smoothed;
 	
 	//Methods
-	void handleDown(Point<double> p) {
+	void handleDown(Point<num> p) {
 		activeFigure = new Polygon()
 			..color = activeColor
 			..addPoint(p);
 		_smoothed = p;
 	}
 	
-	void handleDrag(Point<double> p) {
+	void handleDrag(Point<num> p) {
 		_smoothed = (_smoothed * SMOOTHING) + (p * (1 - SMOOTHING));
 		(activeFigure as Polygon).addPoint(_smoothed);
 	}
 	
-	void handleUp(Point<double> p) {
+	void handleUp(Point<num> p) {
 		handleDrag(p);
 		completeFigure();
 	}
@@ -200,7 +286,7 @@ class SelectionController extends CanvasController {
 	final Circle outline = new Circle();
 	
 	//Methods
-	void handleDown(Point<double> p) {
+	void handleDown(Point<num> p) {
 		unselectedFigures.addAll(selectedFigures);
 		selectedFigures.clear();
 		selectionCircle = outline
@@ -208,7 +294,7 @@ class SelectionController extends CanvasController {
 							..center = p;
 	}
 	
-	void handleDrag(Point<double> p) {
+	void handleDrag(Point<num> p) {
 		outline.radius = p.distanceTo(outline.center);
 		unselectedFigures.addAll(selectedFigures);
 		selectedFigures
@@ -219,19 +305,19 @@ class SelectionController extends CanvasController {
 		unselectedFigures.removeAll(selectedFigures);
 	}
 	
-	void handleUp(Point<double> p) => selectionCircle = null;
+	void handleUp(Point<num> p) => selectionCircle = null;
 }
 
 class MoveController extends CanvasController {
 	//Data
-	Point<double> _last;
+	Point<num> _last;
 	String cursorStyle = 'move';
 	
 	//Methods
-	void handleDown(Point<double> p) { _last = p; }
+	void handleDown(Point<num> p) { _last = p; }
 	
-	void handleDrag(Point<double> p) {
-		Point<double> delta = p - _last;
+	void handleDrag(Point<num> p) {
+		Point<num> delta = p - _last;
 		_last = p;
 		for(Figure f in selectedFigures) {
 			f.center += delta;
