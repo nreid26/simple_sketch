@@ -117,7 +117,7 @@ class Info extends DivElement with Hidable, Nonpropagating {
 	Info.created() : super.created() {
 		id = 'info';
 		innerHtml = '''
-					<h1>Shortcuts</h1>
+					<h1>Controls</h1>
 					<ul>
 						<li><b>ctrl+a:</b> Select All</li>
 						<li><b>ctrl+c:</b> Copy Selected</li>
@@ -130,6 +130,7 @@ class Info extends DivElement with Hidable, Nonpropagating {
 						<li><b>ctrl+q:</b> Change Colour of Selected</li>
 						<li><b>ctrl+s:</b> Save to Local Storage</li>
 						<li><b>ctrl+u:</b> Ungroup Selection</li>
+						<li><b>ctrl+v:</b> Paste Clipboard</li>
 						<li><b>ctrl+x:</b> Cut Selected</li>
 					</ul>
 					''';

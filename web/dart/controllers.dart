@@ -7,7 +7,7 @@ abstract class CanvasController {
 	 	'A': ()  { selectedFigures.addAll(unselectedFigures); unselectedFigures.clear(); },
 	 	'C': () => copiedFigures..clear()..addAll( selectedFigures.map((Figure f) => f.clone()) ),
 	 	'D': () => selectedFigures.clear(),
-	 	'G': ()  { var f = new CompositeFigure(selectedFigures); selectedFigures..clear()..add(f); },
+	 	'G': ()  { if(selectedFigures.length > 2) { var f = new CompositeFigure(selectedFigures); selectedFigures..clear()..add(f); } },
 	 	'I': () => info.hidden = !info.hidden,
 	 	'M': () => menu.hidden = !menu.hidden,
 	 	'P': () => palette.hidden = !palette.hidden,
@@ -74,9 +74,7 @@ abstract class CanvasController {
 	}
 	
 	void acceptMove(MouseEvent e) {
-		e.stopPropagation();
-		e.preventDefault();
-		
+		_generalMouse(e);		
 		if(_down) {
 			handleDrag(e.client);
 			redraw();
@@ -164,7 +162,6 @@ class AxialController extends CanvasController {
 	}	
 	
 	void handleUp(Point<num> p) {
-		handleDrag(p);
 		completeFigure();
 	}
 }

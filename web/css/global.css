@@ -2,22 +2,11 @@ body {
 	overflow: hidden;
 }
 
-#popup_wrapper {
-	position: absolute;
-	top: 0px;
-	z-index: 10;
-	
-	height: 100vh;
-	width: 100vw;
-	
-	display: table;
-}
 #popup {
-	display: table-cell;
-	vertical-align: middle;
 	text-align: center;
 }
 #popup > div {
+	position: absolute;
 	display: inline-block;
 	background-color: #888888;
 	
@@ -56,6 +45,10 @@ body {
 	border-radius: 5px;
 }
 
+#info {
+	top: 0px;
+	left: 0px;
+}
 #info li {
 	text-align: left;
 }

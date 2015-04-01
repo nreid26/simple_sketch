@@ -16,6 +16,7 @@ final Point<double> ORIGIN = const Point<double>(0.0, 0.0);
 final Set<Figure> unselectedFigures = new Set<Figure>(), selectedFigures = new Set<Figure>(), copiedFigures = new Set<Figure>();
 final CanvasElement canvas = document.querySelector('#canvas');
 final CanvasRenderingContext2D context = canvas.context2D;
+final DivElement popup = document.querySelector('#popup');
 final Palette palette = new Palette();
 final Menu menu = new Menu();
 final Info info = new Info();
@@ -54,11 +55,9 @@ void main() {
 		..children.first.click();
 	
 	//Fill Popup
-	document.querySelector('#popup')
+	popup
 		..append(menu)
-		..append(new BRElement())
 		..append(palette)
-		..append(new BRElement())
 		..append(info);
 	
 	//Assign listeners
@@ -104,6 +103,12 @@ void completeFigure() {
 }
 
 void mouseUpdate(Point p) {
-	
+	for(Hidable h in popup.children) {
+		if(h is Hidable && h.hidden) {
+			h.style
+				..left = '${p.x}px'
+				..top = '${p.y}px';
+		}
+	}
 }
 
